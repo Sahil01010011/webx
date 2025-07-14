@@ -1,6 +1,3 @@
-<p align="center">
-    <img src="https://i.imgur.com/JQ9w8bU.png" alt="WebX Logo" width="300"/>
-</p>
 
 <h1 align="center">WebX</h1>
 <p align="center">
