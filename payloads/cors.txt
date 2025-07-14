@@ -1,0 +1,14 @@
+Origin: http://evil.com
+Origin: https://evil.com
+Origin: null
+Origin: file://
+Origin: chrome-extension://evil
+Origin: http://127.0.0.1
+Origin: http://localhost
+Origin: http://[::]
+Origin: http://subdomain.victim.com.evil.com
+Origin: http://.victim.com
+Origin: http://victim.com.evil.com
+Origin: http://victim.com:evil.com
+Origin: http://%2F%2Fevil.com
+Origin: http://username@evil.com
