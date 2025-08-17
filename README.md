@@ -1,6 +1,4 @@
-<img src="https://r2cdn.perplexity.ai/pplx-full-logo-primary-dark%402x.png" style="height:64px;margin-right:32px"/>
 
-# here is .env file template please include it on the readme.md
 
 *\# WebX Elite Configuration*
 
@@ -72,7 +70,7 @@ Here's the updated README.md file with the environment configuration section inc
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/YOUR_GITHUB/webx-elite.git
+git clone https://github.com/Sahil01010011/webx.git
 cd webx-elite
 ```
 
