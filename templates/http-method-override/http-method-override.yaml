@@ -1,0 +1,53 @@
+# templates/http-method-override/http-method-override.yaml
+id: http-method-override
+info:
+  name: HTTP Method Override Detection
+  author: webx-elite
+  severity: medium
+  description: Tests for HTTP method override vulnerabilities
+  tags:
+    - method-override
+    - http-verb-tampering
+  classification:
+    cwe-id: CWE-650
+
+vulnerability_type: http-method-override
+
+request:
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      X-HTTP-Method-Override: "{{override_method}}"
+      Content-Type: application/x-www-form-urlencoded
+    body: "test=value"
+    
+  - method: GET
+    path: "{{BaseURL}}"
+    headers:
+      X-Method-Override: "{{override_method}}"
+    
+    matchers:
+      - type: word
+        words:
+          - "method not allowed"
+          - "405"
+          - "forbidden"
+        part: body
+        negative: true
+      - type: status
+        status:
+          - 200
+          - 201
+          - 204
+
+payloads:
+  - "DELETE"
+  - "PUT"
+  - "PATCH"
+  - "HEAD"
+  - "OPTIONS"
+  - "TRACE"
+  - "CONNECT"
+
+encoders:
+  - url

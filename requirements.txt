@@ -1,8 +1,47 @@
-requests==2.31.0
-beautifulsoup4==4.12.2
-argparse==1.4.0
-urllib3==2.0.4
-python-dotenv==1.0.0
-PyJWT==2.8.0
-tqdm==4.66.1
-colorama==0.4.6
+
+
+# Core dependencies
+PyYAML
+requests
+urllib3
+colorama
+# Async & HTTP
+aiohttp
+# Data parsing, reporting, and utilities
+lxml
+beautifulsoup4
+jsonschema
+regex
+
+# AI Providers (install if AI modules enabled or planning to use Groq, OpenAI, etc.)
+openai
+httpx
+
+# Environmental variable support
+python-dotenv
+
+# JWT, token, and auth handling
+PyJWT
+
+# Crawling / Browser Automation (only if you enable JS crawling)
+playwright
+selenium
+# Fast API server (for any OAST client/server use)
+fastapi
+uvicorn
+
+# Optional: CLI frameworks
+click
+# Data analysis for advanced reports/statistics
+numpy
+pandas
+
+# Packaging and setup helper
+setuptools
+
+# Type hints
+typing-extensions
+# Testing and linting (optional, for development only)
+pytest
+flake8
+black

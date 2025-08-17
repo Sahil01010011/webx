@@ -1,0 +1,41 @@
+# templates/info-disclosure/sensitive-info-disclosure.yaml
+id: sensitive-info-disclosure
+info:
+  name: Sensitive Information Disclosure
+  author: shadowxp
+  severity: medium
+  description: Tests for sensitive information disclosure in responses
+  tags:
+    - info-disclosure
+    - sensitive-data
+    - information-leakage
+
+vulnerability_type: info-disclosure
+
+request:
+  - method: GET
+    path: "{{BaseURL}}/{{info_path}}"
+    
+    matchers:
+      - type: regex
+        regex:
+          - "password\\s*[=:]\\s*['\"][^'\"]*['\"]"
+          - "api[_-]?key\\s*[=:]\\s*['\"][^'\"]*['\"]"
+          - "secret\\s*[=:]\\s*['\"][^'\"]*['\"]"
+          - "token\\s*[=:]\\s*['\"][^'\"]*['\"]"
+        part: body
+
+payloads:
+  # Common disclosure paths
+  - ".env"
+  - "config.php"
+  - "config.json"
+  - "settings.ini"
+  - "web.config"
+  - "application.properties"
+  - "database.yml"
+  - ".git/config"
+  - "backup.sql"
+
+encoders:
+  - url

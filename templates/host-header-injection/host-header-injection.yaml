@@ -1,0 +1,59 @@
+# templates/host-header-injection/host-header-injection.yaml
+id: host-header-injection
+info:
+  name: Host Header Injection Detection
+  author: webx-elite
+  severity: medium
+  description: Tests for Host header injection vulnerabilities
+  tags:
+    - host-header-injection
+    - injection
+    - cache-poisoning
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N
+    cvss-score: 5.4
+    cwe-id: CWE-20
+
+vulnerability_type: host-header-injection
+
+request:
+  - method: GET
+    path: "{{BaseURL}}"
+    headers:
+      Host: "{{host_payload}}"
+    
+    matchers:
+      - type: word
+        words:
+          - "evil.com"
+          - "attacker.com"
+          - "malicious.org"
+          - "{{host_payload}}"
+        part: body
+        condition: or
+      - type: word
+        words:
+          - "evil.com"
+          - "attacker.com"
+          - "{{host_payload}}"
+        part: header
+        condition: or
+
+payloads:
+  # Basic host injection
+  - "evil.com"
+  - "attacker.com"
+  - "127.0.0.1"
+  - "localhost"
+  
+  # Password reset poisoning
+  - "evil.com:80"
+  - "target.com.evil.com"
+  - "evil.com#target.com"
+  - "evil.com/target.com"
+  
+  # Cache poisoning
+  - "evil.com\r\nX-Forwarded-Host: evil.com"
+
+encoders:
+  - url

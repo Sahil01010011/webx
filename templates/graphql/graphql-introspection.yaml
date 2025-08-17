@@ -1,0 +1,46 @@
+# templates/graphql/graphql-introspection.yaml
+id: graphql-introspection
+info:
+  name: GraphQL Introspection Query Detection
+  author: shadowxp
+  severity: medium
+  description: Tests for enabled GraphQL introspection queries
+  tags:
+    - graphql
+    - introspection
+    - information-disclosure
+
+vulnerability_type: graphql
+
+request:
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "query": "{{graphql_payload}}"
+      }
+    
+    matchers:
+      - type: word
+        words:
+          - "__schema"
+          - "__type"
+          - "queryType"
+          - "mutationType"
+        part: body
+      - type: status
+        status:
+          - 200
+
+payloads:
+  # Basic introspection
+  - "query { __schema { types { name } } }"
+  # Full schema dump
+  - "query IntrospectionQuery { __schema { queryType { name } mutationType { name } subscriptionType { name } types { ...FullType } directives { name description locations args { ...InputValue } } } } fragment FullType on __Type { kind name description fields(includeDeprecated: true) { name description args { ...InputValue } type { ...TypeRef } isDeprecated deprecationReason } inputFields { ...InputValue } interfaces { ...TypeRef } enumValues(includeDeprecated: true) { name description isDeprecated deprecationReason } possibleTypes { ...TypeRef } } fragment InputValue on __InputValue { name description type { ...TypeRef } defaultValue } fragment TypeRef on __Type { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name ofType { kind name } } } } } } } }"
+  # Type enumeration
+  - "query { __type(name: \"User\") { fields { name type { name } } } }"
+
+encoders:
+  - json_encode

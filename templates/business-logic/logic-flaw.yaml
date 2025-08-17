@@ -1,0 +1,41 @@
+# templates/business-logic/logic-flaw.yaml
+id: logic-flaw
+info:
+  name: Business Logic Flaw
+  author: shadowxp
+  severity: medium
+  description: Tests for business logic flaws in price/quantity manipulation
+  tags:
+    - business-logic
+    - price-manipulation
+    - logic-flaw
+
+vulnerability_type: business-logic
+
+request:
+  - method: POST
+    path: "{{BaseURL}}/{{endpoint}}"
+    body: "{{payload}}"
+    
+    matchers:
+      - type: word
+        words:
+          - "total"
+          - "price"
+          - "amount"
+        part: body
+
+payloads:
+  # Negative values
+  - "price=-100"
+  - "quantity=-1"
+  - "discount=-50"
+  # Large numbers
+  - "quantity=999999999"
+  - "discount=100000"
+  # Decimal manipulation
+  - "price=0.01"
+  - "price=99999999.99"
+
+encoders:
+  - url

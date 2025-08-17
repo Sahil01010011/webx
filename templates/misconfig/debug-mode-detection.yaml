@@ -1,0 +1,37 @@
+# templates/misconfig/debug-mode-detection.yaml
+id: debug-mode-detection
+info:
+  name: Debug Mode Detection
+  author: shadowxp
+  severity: medium
+  description: Detects applications running in debug mode
+  tags:
+    - misconfiguration
+    - debug
+    - information-disclosure
+
+vulnerability_type: misconfig
+
+request:
+  - method: GET
+    path: "{{BaseURL}}/{{debug_path}}"
+    
+    matchers:
+      - type: word
+        words:
+          - "debug"
+          - "development"
+          - "traceback"
+          - "stack trace"
+          - "error details"
+        part: body
+
+payloads:
+  - "debug"
+  - "test"
+  - "dev"
+  - "development"
+  - "staging"
+
+encoders:
+  - url

@@ -1,0 +1,57 @@
+# templates/redirect/open-redirect-basic.yaml
+id: open-redirect-basic
+info:
+  name: Open Redirect Vulnerability
+  author: shadowxp
+  severity: medium
+  description: Tests for open redirect vulnerabilities
+  tags:
+    - redirect
+    - phishing
+    - open-redirect
+
+vulnerability_type: redirect
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}={{redirect_payload}}"
+    redirects: true
+    max-redirects: 3
+    
+    matchers:
+      - type: word
+        words:
+          - "example.com"
+          - "google.com"
+          - "evil.com"
+        part: header
+      - type: status
+        status:
+          - 301
+          - 302
+          - 303
+          - 307
+          - 308
+
+payloads:
+  # Basic redirects
+  - "http://evil.com"
+  - "https://evil.com"
+  - "//evil.com"
+  - "///evil.com"
+  - "////evil.com"
+  # Protocol relative
+  - "//google.com"
+  - "\\/\\/google.com"
+  - "/\\google.com"
+  # Encoded
+  - "http%3A%2F%2Fevil.com"
+  - "%2F%2Fevil.com"
+  # Bypass attempts
+  - "javascript:alert(1)"
+  - "http://evil.com@trusted.com"
+  - "http://trusted.com.evil.com"
+
+encoders:
+  - url
+  - double_url

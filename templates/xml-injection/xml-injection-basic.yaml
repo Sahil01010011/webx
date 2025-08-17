@@ -1,0 +1,59 @@
+# templates/xml-injection/xml-injection-basic.yaml
+id: xml-injection-basic
+info:
+  name: XML Injection Vulnerability Detection
+  author: webx-elite
+  severity: medium
+  description: Tests for XML injection vulnerabilities in SOAP/XML endpoints
+  tags:
+    - xml-injection
+    - injection
+    - soap
+  classification:
+    cwe-id: CWE-91
+
+vulnerability_type: xml-injection
+
+request:
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/xml
+      SOAPAction: ""
+    body: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+        <soap:Body>
+          <test>{{xml_payload}}</test>
+        </soap:Body>
+      </soap:Envelope>
+    
+    matchers:
+      - type: word
+        words:
+          - "XML parsing error"
+          - "Invalid XML document"
+          - "org.xml.sax.SAXParseException"
+          - "javax.xml.stream.XMLStreamException"
+          - "XML syntax error"
+          - "malformed XML"
+        part: body
+        condition: or
+
+payloads:
+  # XML structure manipulation
+  - "</test><injected>malicious</injected><test>"
+  - "</test></soap:Body></soap:Envelope><injected/>"
+  - "<!--"
+  - "--><script>alert('XSS')</script><!--"
+  
+  # CDATA injection
+  - "]]><script>alert('XSS')</script><![CDATA["
+  - "]]><injected>test</injected><![CDATA["
+  
+  # XML entity injection
+  - "&lt;injected&gt;test&lt;/injected&gt;"
+
+encoders:
+  - xml_encode
+  - url

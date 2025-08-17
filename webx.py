@@ -1,431 +1,462 @@
-import requests
-import os
+#!/usr/bin/env python3
+# webx.py - WebX Elite Security Assessment Platform v10.0
+
+import argparse
+import asyncio
 import time
-from urllib.parse import urljoin, urlparse
-from bs4 import BeautifulSoup
 import sys
+import os
+import requests
+import urllib3
 from datetime import datetime
-from dotenv import load_dotenv
-load_dotenv()  # Loads before other imports
+from pathlib import Path
+from urllib.parse import urlparse
+from colorama import init, Fore, Style, Back
+from typing import Dict, List, Any
+import logging
 
-def setup_environment(self):
-    """Load .env settings with safety checks"""
-    self.user_agent = os.getenv("USER_AGENT", "WebX/1.0")
-    self.delay = max(0.3, float(os.getenv("REQUEST_DELAY", 0.5)))  # Minimum 0.3s delay
-    self.max_threads = min(int(os.getenv("MAX_THREADS", 5)), 10)  # Max 10 threads
+# Banner specific imports
+import shutil
+import math
+import random
 
-class WebXScanner:
-    def __init__(self):
-        self.target_url = ""
-        self.domain = ""
-        self.session = requests.Session()
-        self.vulnerabilities = []
-        self.discovered_endpoints = set()
-        self.checked_urls = set()
-        self.payload_dirs = {
-            'sqli': 'payloads/sql.txt',
-            'xss': 'payloads/xss.txt',
-            'redirect': 'payloads/redirect.txt',
-            'traversal': 'payloads/traversal.txt',
-            'ssrf': 'payloads/ssrf.txt',
-            'cors': 'payloads/cors.txt',
-            'jwt': 'payloads/jwt.txt'
-        }
-        self.setup_session()
-        self.ensure_payload_dirs()
+try:
+    from pyfiglet import Figlet
+except Exception:
+    Figlet = None
 
-    def ensure_payload_dirs(self):
-        """Create payloads directory and default files if they don't exist"""
-        if not os.path.exists('payloads'):
-            os.makedirs('payloads')
-            
-        for payload_type, filepath in self.payload_dirs.items():
-            if not os.path.exists(filepath):
-                with open(filepath, 'w') as f:
-                    if payload_type == 'sqli':
-                        f.write("\n".join([
-                            "' OR '1'='1",
-                            "' OR 1=1--",
-                            "1' UNION SELECT null,version()--"
-                        ]))
-                    elif payload_type == 'xss':
-                        f.write("\n".join([
-                            "<script>alert(1)</script>",
-                            "<img src=x onerror=alert(1)>",
-                            "javascript:alert(1)"
-                        ]))
-                    elif payload_type == 'redirect':
-                        f.write("\n".join([
-                            "https://evil.com",
-                            "//evil.com",
-                            "http://localhost"
-                        ]))
-                    elif payload_type == 'traversal':
-                        f.write("\n".join([
-                            "../../../../etc/passwd",
-                            "..%2F..%2Fetc%2Fpasswd"
-                        ]))
+# Core imports for advanced modules
+from core.template_parser import (
+    load_templates_by_category,
+    get_template_statistics,
+)
+from core.heuristics import (
+    comprehensive_vulnerability_analysis
+)
+from core.engine import run_scan
+from core.reporter import AdvancedReporter
+from core.crawler import crawl, production_crawler
+from core.oast_client import EnhancedOASTClient
+from core.ai_provider import (
+    initialize_ai_providers,
+    check_env_configuration
+)
+from core.http_client import reset_client_statistics
 
-    def load_payloads(self, payload_type):
-        """Load payloads from the specified file with UTF-8 encoding"""
-        filepath = self.payload_dirs.get(payload_type)
-        if not filepath or not os.path.exists(filepath):
-            return []
-        
+# .env
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+init(autoreset=True)
+
+# Configure logging
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('webx.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+# Quieten noisy libraries
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("asyncio").setLevel(logging.WARNING)
+
+logger = logging.getLogger(__name__)
+
+
+# --- Start of Integrated Banner Code ---
+
+ESC = "\033["
+
+def rgb(r, g, b):
+    return f"{ESC}38;2;{r};{g};{b}m"
+
+def reset():
+    return f"{ESC}0m"
+
+def make_figlet_text(text: str, font: str = "doom") -> str:
+    if Figlet:
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:  # Explicit UTF-8
-                return [line.strip() for line in f if line.strip()]
-        except UnicodeDecodeError:
-            # Fallback to latin-1 if UTF-8 fails
-            with open(filepath, 'r', encoding='latin-1') as f:
-                return [line.strip() for line in f if line.strip()]
+            f = Figlet(font=font)
+            return f.renderText(text)
+        except Exception:
+            # Fallback if the font is not found
+            f = Figlet(font="slant")
+            return f.renderText(text)
+            
+    # Fallback if pyfiglet is not installed
+    lines = [
+        " __      __   ______   __  __ ",
+        " \\ \\    / /  |  ____| |  \\/  |",
+        "  \\ \\  / /   | |__    | \\  / |",
+        "   \\ \\/ /    |  __|   | |\\/| |",
+        "    \\  /     | |____  | |  | |",
+        "     \\/      |______| |_|  |_|",
+    ]
+    return "\n".join(lines) + "\n"
 
-    def setup_session(self):
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5'
-        })
+def gradient_for_pos(start_rgb, end_rgb, t):
+    return (
+        int(start_rgb[0] + (end_rgb[0] - start_rgb[0]) * t),
+        int(start_rgb[1] + (end_rgb[1] - start_rgb[1]) * t),
+        int(start_rgb[2] + (end_rgb[2] - start_rgb[2]) * t),
+    )
 
-    def print_banner(self):
-        banner = """
-        ██╗    ██╗███████╗██████╗ ██╗  ██╗
-        ██║    ██║██╔════╝██╔══██╗╚██╗██╔╝
-        ██║ █╗ ██║█████╗  ██████╔╝ ╚███╔╝ 
-        ██║███╗██║██╔══╝  ██╔══██╗ ██╔██╗ 
-        ╚███╔███╔╝███████╗██████╔╝██╔╝ ██╗
-         ╚══╝╚══╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝
-                                           
-        WebX - Professional Web Vulnerability Scanner
+def colored_gradient_text(ascii_text: str, start_rgb, end_rgb, width=None):
+    """Apply a horizontal gradient across the rendered ascii art."""
+    lines = ascii_text.rstrip("\n").splitlines()
+    if not lines:
+        return []
+    if width is None:
+        width = max(len(l) for l in lines)
+    out_lines = []
+    for line in lines:
+        padded = line.ljust(width)
+        colored = []
+        for i, ch in enumerate(padded):
+            t = i / max(1, width - 1)
+            r, g, b = gradient_for_pos(start_rgb, end_rgb, t)
+            colored.append(f"{rgb(r,g,b)}{ch}")
+        out_lines.append("".join(colored) + reset())
+    return out_lines
+
+def print_elite_banner():
+    """
+    Prints the integrated, styled banner for WebX Elite.
+    """
+    text = "WEBX"
+    tagline = "v10.0 Elite :: A Next-Generation Web Security Scanner By shadowxp"
+    font = "doom"
+    
+    # Terminal width
+    try:
+        term_w = shutil.get_terminal_size().columns
+    except Exception:
+        term_w = 100
+
+    ascii_text = make_figlet_text(text, font=font)
+    lines = ascii_text.rstrip("\n").splitlines()
+    
+    # Fallback for empty figlet generation
+    if not lines:
+        print("WEBX Elite v10.0")
+        return
+
+    width = max(len(l) for l in lines)
+
+    # Optional: restrict the figure size a bit if it's too wide
+    if width > term_w - 4 and Figlet:
+        ascii_text = make_figlet_text(text, font="slant")
+        lines = ascii_text.rstrip("\n").splitlines()
+        width = max(len(l) for l in lines) if lines else 0
+
+    # Define the original red-themed color scheme
+    start_rgb = (255, 80, 60)      # Bright Red-Orange
+    end_rgb = (140, 0, 10)         # Deep Crimson
+    tag_color = (255, 120, 120)    # Light Red
+    underline_color = (200, 50, 50) # Strong Red
+
+    colored_lines = colored_gradient_text(ascii_text, start_rgb, end_rgb, width=width)
+    
+    # Center and print each line of the banner
+    pad = (term_w - width) // 2
+    for line in colored_lines:
+        print(" " * pad + line)
+
+    # Tagline
+    # Note: The tagline is now also red to match the theme.
+    tag_colored = f"{rgb(*tag_color)}{tagline.center(term_w)}{reset()}"
+    print(tag_colored)
+
+    # Underline
+    underline = f"{rgb(*underline_color)}" + ("═" * min(term_w - 2, 80)).center(term_w) + reset()
+    print(underline)
+
+# --- End of Integrated Banner Code ---
+
+
+def print_system_info():
+    # This function uses the original colorama Fore colors, which is fine.
+    print(f"\n{Fore.CYAN}🔧 SYSTEM CONFIGURATION:{Style.RESET_ALL}")
+    print("─" * 40)
+    env_config = check_env_configuration()
+    if env_config["env_file_exists"]:
+        print(f"{Fore.GREEN}✓ Configuration file: .env loaded")
+    else:
+        print(f"{Fore.YELLOW}⚠ Configuration file: .env not found")
+    ai_providers = []
+    if env_config["groq_available"]:
+        ai_providers.append("Groq (FREE)")
+    if env_config["openrouter_available"]:
+        ai_providers.append("OpenRouter (FREE)")
+    if env_config["perplexity_available"]:
+        ai_providers.append("Perplexity (PAID)")
+    if ai_providers:
+        print(f"{Fore.GREEN}✓ AI Providers: {', '.join(ai_providers)}")
+    else:
+        print(f"{Fore.RED}✗ AI Providers: None configured")
+    try:
+        template_stats = get_template_statistics("templates/")
+        print(f"{Fore.GREEN}✓ Templates: {template_stats.get('templates_loaded', 0)} loaded")
+        print(f"   └─ Categories: {len(template_stats.get('category_distribution', {}))}")
+    except:
+        print(f"{Fore.YELLOW}⚠ Templates: Directory not found or empty")
+    print()
+
+def print_finding_immediately(finding: Dict):
+    """Prints a single finding to the console as soon as it's discovered."""
+    info = finding.get('info', {})
+    details = finding.get('details', {})
+    severity = info.get('severity', 'info').upper()
+    
+    severity_colors = {
+        'CRITICAL': Fore.RED + Style.BRIGHT,
+        'HIGH': Fore.LIGHTRED_EX,
+        'MEDIUM': Fore.YELLOW,
+        'LOW': Fore.LIGHTBLUE_EX,
+        'INFO': Fore.WHITE
+    }
+    color = severity_colors.get(severity, Fore.WHITE)
+
+    print(f"\n\n{color}[🔥 VULNERABILITY FOUND!]--------------------------------{Style.RESET_ALL}")
+    print(f"  {Fore.WHITE}Name:      {Style.BRIGHT}{info.get('name', 'N/A')}{Style.RESET_ALL}")
+    print(f"  {Fore.WHITE}Severity:  {color}{severity}{Style.RESET_ALL}")
+    print(f"  {Fore.WHITE}URL:       {details.get('url', 'N/A')}")
+    print(f"  {Fore.WHITE}Parameter: {details.get('parameter', 'N/A')}")
+    print(f"  {Fore.WHITE}Payload:   {Fore.YELLOW}{details.get('payload', 'N/A')}{Style.RESET_ALL}")
+    print(f"{color}------------------------------------------------------{Style.RESET_ALL}\n")
+
+
+def create_argument_parser():
+    parser = argparse.ArgumentParser(
+        description="WebX Elite v10.0 - A Next-Generation Web Security Scanner",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=f"""
+{Fore.CYAN}EXAMPLES:{Style.RESET_ALL}
+  # Run in interactive mode (recommended)
+  python webx.py -u http://testphp.vulnweb.com
+
+  # Run a non-interactive scan for specific vulnerabilities
+  python webx.py -u https://api.example.com --scan-vuln sqli xss
+
+  # Run a full, non-interactive scan for all detected vulnerability types
+  python webx.py -u https://example.com --scan-all
         """
-        print(banner)
-        print("Note: Only use this tool on websites you have permission to scan")
-        print("="*60)
+    )
+    # Target and scan options
+    target_group = parser.add_argument_group('Target Configuration')
+    target_group.add_argument("-u", "--url", required=True, help="Target base URL")
+    target_group.add_argument("-t", "--templates", default="templates/", help="Path to templates directory")
+    target_group.add_argument("--user-agent", default="WebX-Elite/10.0", help="Custom User-Agent")
+    target_group.add_argument("--proxy", help="Proxy URL (e.g., http://127.0.0.1:8080)")
+    
+    scan_group = parser.add_argument_group('Scan Control')
+    scan_group.add_argument("--scan-vuln", nargs='+', help="Run a non-interactive scan for specific vulnerability types (e.g., xss, sqli)")
+    scan_group.add_argument("--scan-all", action="store_true", help="Run a non-interactive scan for all detected vulnerability types")
+    
+    config_group = parser.add_argument_group('Scan Configuration')
+    config_group.add_argument("--delay", type=int, default=0, help="Delay in milliseconds between requests")
+    config_group.add_argument("--timeout", type=int, default=30, help="Request timeout in seconds")
+    config_group.add_argument("-c", "--concurrency", type=int, default=10, help="Number of concurrent tasks (default: 10)")
 
-    def get_target_url(self):
+    ai_group = parser.add_argument_group('AI Enhancement')
+    ai_group.add_argument("--ai-mode", choices=['none', 'smart', 'full'],
+                          default=os.getenv('AI_DEFAULT_MODE', 'smart'),
+                          help="AI analysis mode")
+    
+    output_group = parser.add_argument_group('Output Configuration')
+    output_group.add_argument("-o", "--output", help="Base filename for the final HTML report")
+    
+    return parser
+
+
+async def main():
+    parser = create_argument_parser()
+    args = parser.parse_args()
+    
+    print_elite_banner()
+    print_system_info()
+
+    # --- Initialization ---
+    session = requests.Session()
+    session.headers.update({'User-Agent': args.user_agent})
+    reporter = AdvancedReporter()
+    session_findings = []
+    
+    original_base_url = args.url
+    if not original_base_url.startswith(('http://', 'https://')):
+        original_base_url = f"http://{original_base_url}"
+    
+    print(f"{Fore.WHITE}🎯 Target: {Style.BRIGHT}{original_base_url}{Style.RESET_ALL}")
+    print(f"{Fore.WHITE}🤖 AI Mode: {args.ai_mode.upper()}{Style.RESET_ALL}")
+
+    initialize_ai_providers(mode=args.ai_mode)
+    
+    # --- Phase 1: Discovery & Analysis ---
+    print(f"\n{Fore.CYAN}{'═' * 20} PHASE 1: DISCOVERY & ANALYSIS {'═' * 20}{Style.RESET_ALL}")
+    print("[*] Discovering injection points with advanced crawling...")
+    start_time = time.time()
+    injection_points = await crawl(session, original_base_url, proxy=args.proxy)
+    
+    if not injection_points:
+        print(f"{Fore.RED}[-] No injection points found. Exiting.{Style.RESET_ALL}")
+        return
+
+    print(f"\n[+] Discovery complete in {time.time() - start_time:.1f}s. Found {len(injection_points)} unique injection points.")
+    print("[*] Running heuristic analysis to identify potential vulnerabilities...")
+    
+    heuristic_results = await comprehensive_vulnerability_analysis(session, injection_points, proxy=args.proxy, enable_ai=(args.ai_mode != 'none'))
+    categorized_points = heuristic_results.get('categorized_parameters', {})
+    
+    print(f"[+] {Fore.GREEN}Analysis complete.{Style.RESET_ALL} Potential targets identified.")
+
+    # --- Phase 2: Interactive or Non-Interactive Scanning ---
+    scan_list = []
+    if args.scan_all:
+        scan_list = list(categorized_points.keys())
+    elif args.scan_vuln:
+        scan_list = args.scan_vuln
+    else:
+        # Interactive Mode Loop
         while True:
-            print("\n[+] Enter target URL (e.g., https://example.com):")
-            url = input("> ").strip()
+            print(f"\n{Fore.CYAN}{'═' * 25} TACTICAL SCANNING MENU {'═' * 25}{Style.RESET_ALL}")
             
-            if not url.startswith(('http://', 'https://')):
-                print("[-] Please include http:// or https://")
-                continue
-                
-            try:
-                response = self.session.get(url, timeout=5)
-                if response.status_code < 400:
-                    self.target_url = url
-                    self.domain = urlparse(url).netloc
-                    print(f"[+] Target set to: {self.target_url}")
-                    return
-                else:
-                    print(f"[-] Received HTTP {response.status_code} for URL")
-            except Exception as e:
-                print(f"[-] Error connecting to {url}: {str(e)}")
+            scan_options = {}
+            option_num = 1
+            sorted_categories = sorted(categorized_points.items(), key=lambda item: len(item[1]), reverse=True)
 
-    def show_scan_options(self):
-        print("\n[+] Select vulnerabilities to scan (comma-separated):")
-        print(" 1. SQL Injection (SQLi)")
-        print(" 2. Cross-Site Scripting (XSS)")
-        print(" 3. Open Redirection")
-        print(" 4. Path Traversal")
-        print(" 5. Server-Side Request Forgery (SSRF)")
-        print(" 6. CORS Misconfigurations")
-        print(" 7. JWT Issues")
-        print(" 8. Full Comprehensive Scan")
-        print("\n[+] Enter 'q' to quit")
+            for vuln_type, targets in sorted_categories:
+                if targets:
+                    scan_options[str(option_num)] = vuln_type
+                    print(f"  {Style.BRIGHT}[{option_num}]{Style.NORMAL} {vuln_type.upper():<20} ({len(targets)} potential targets)")
+                    option_num += 1
 
-    def get_scan_choices(self):
-        while True:
-            choice = input("\n> ").strip().lower()
+            if not scan_options:
+                print(f"{Fore.YELLOW}[-] No potential vulnerabilities identified by heuristics.{Style.RESET_ALL}")
+                break
+
+            print(f"\n  {Style.BRIGHT}[A]{Style.NORMAL} Scan All Detected Categories")
+            print(f"  {Style.BRIGHT}[Q]{Style.NORMAL} Quit and Generate Report")
             
+            choice = input(f"\n{Style.BRIGHT}Select an option to scan: {Style.RESET_ALL}").strip().lower()
+
             if choice == 'q':
-                sys.exit(0)
-                
-            selected = [c.strip() for c in choice.split(',')]
-            valid_choices = []
+                break
             
-            for c in selected:
-                if c in ['1', '2', '3', '4', '5', '6', '7', '8']:
-                    valid_choices.append(c)
-                else:
-                    print(f"[-] Invalid option: {c}")
-            
-            if valid_choices:
-                return valid_choices
+            if choice == 'a':
+                scan_list = list(scan_options.values())
+            elif choice in scan_options:
+                scan_list = [scan_options[choice]]
             else:
-                print("[-] Please select at least one valid option")
+                print(f"{Fore.RED}[-] Invalid selection.{Style.RESET_ALL}")
+                continue # Go back to showing the menu
 
-    def run_selected_scans(self, choices):
-        print(f"\n[+] Starting scan for {len(choices)} selected vulnerabilities")
+            # --- This block runs the selected scan(s) inside the loop ---
+            print(f"\n{Fore.CYAN}{'═' * 20} PHASE 2: ASSESSMENT {'═' * 20}{Style.RESET_ALL}")
+            for vuln_type in scan_list:
+                targets = categorized_points.get(vuln_type)
+                if not targets:
+                    print(f"\n{Fore.YELLOW}[-] No potential targets found for {vuln_type.upper()}, skipping.{Style.RESET_ALL}")
+                    continue
+
+                print(f"\n{Fore.YELLOW}[*] Loading templates for {vuln_type.upper()}...{Style.RESET_ALL}")
+                templates = load_templates_by_category(args.templates, vuln_type)
+                if not templates:
+                    print(f"{Fore.YELLOW}[-] No templates found for {vuln_type}.{Style.RESET_ALL}")
+                    continue
+                
+                print(f"[+] Loaded {len(templates)} templates. Starting scan on {len(targets)} targets.")
+                
+                scan_findings = await run_scan(targets, templates, args.user_agent, args.delay, args.concurrency, args.proxy)
+                
+                if scan_findings:
+                    for finding in scan_findings:
+                        print_finding_immediately(finding)
+                        session_findings.append(finding)
+                
+                print(f"\n{Fore.GREEN}[+] {vuln_type.upper()} scan complete.{Style.RESET_ALL}")
+            scan_list = [] # Clear the list to loop back to the menu
+    
+    # This block runs for non-interactive scans
+    if scan_list:
+        print(f"\n{Fore.CYAN}{'═' * 20} PHASE 2: ASSESSMENT {'═' * 20}{Style.RESET_ALL}")
+        for vuln_type in scan_list:
+            targets = categorized_points.get(vuln_type)
+            if not targets:
+                print(f"\n{Fore.YELLOW}[-] No potential targets found for {vuln_type.upper()}, skipping.{Style.RESET_ALL}")
+                continue
+
+            print(f"\n{Fore.YELLOW}[*] Loading templates for {vuln_type.upper()}...{Style.RESET_ALL}")
+            templates = load_templates_by_category(args.templates, vuln_type)
+            if not templates:
+                print(f"{Fore.YELLOW}[-] No templates found for {vuln_type}.{Style.RESET_ALL}")
+                continue
+            
+            print(f"[+] Loaded {len(templates)} templates. Starting scan on {len(targets)} targets.")
+            
+            scan_findings = await run_scan(targets, templates, args.user_agent, args.delay, args.concurrency, args.proxy)
+            
+            if scan_findings:
+                for finding in scan_findings:
+                    print_finding_immediately(finding)
+                    session_findings.append(finding)
+            
+            print(f"\n{Fore.GREEN}[+] {vuln_type.upper()} scan complete.{Style.RESET_ALL}")
+
+    # --- Phase 3: Reporting and Cleanup ---
+    print(f"\n{Fore.CYAN}{'═' * 20} FINAL SUMMARY {'═' * 20}{Style.RESET_ALL}")
+    
+    if session_findings:
+        # Automatic report generation on quit
+        print(f"\n[*] Generating final HTML report...")
+        report_args = argparse.Namespace(**vars(args))
         
-        # First crawl the site to discover endpoints
-        self.crawl(self.target_url, depth=1)
+        if not report_args.output:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            domain = urlparse(original_base_url).netloc.replace(':', '_')
+            report_args.output = f"webx_report_{domain}_{timestamp}"
         
-        # Run selected scans
-        if '8' in choices:  # Full scan
-            self.test_sqli()
-            self.test_xss()
-            self.test_open_redirection()
-            self.test_path_traversal()
-            self.test_ssrf()
-            self.test_cors()
-            self.test_jwt()
+        report_args.output_formats = ['html']
+        
+        scan_info = {
+            'target_url': original_base_url,
+            'scan_date': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'scan_duration': time.time() - start_time,
+            'ai_mode': args.ai_mode,
+        }
+        
+        # Create a reports directory if it doesn't exist for the reporter
+        Path("reports").mkdir(exist_ok=True)
+        
+        report_paths = await reporter.generate_comprehensive_report(
+            findings=session_findings,
+            scan_info=scan_info,
+            formats=report_args.output_formats
+        )
+        if report_paths.get('html'):
+            print(f"{Fore.GREEN}[+] Report saved to: {report_paths['html']}{Style.RESET_ALL}")
         else:
-            if '1' in choices:
-                self.test_sqli()
-            if '2' in choices:
-                self.test_xss()
-            if '3' in choices:
-                self.test_open_redirection()
-            if '4' in choices:
-                self.test_path_traversal()
-            if '5' in choices:
-                self.test_ssrf()
-            if '6' in choices:
-                self.test_cors()
-            if '7' in choices:
-                self.test_jwt()
-        
-        self.show_results()
+            print(f"{Fore.RED}[-] Failed to generate HTML report.{Style.RESET_ALL}")
+    else:
+        print(f"{Fore.GREEN}[+] No vulnerabilities were found during the session.{Style.RESET_ALL}")
 
-    def crawl(self, url, depth=1):
-        if depth == 0 or url in self.checked_urls:
-            return
-            
-        self.checked_urls.add(url)
-        print(f"[*] Crawling: {url}")
-        
-        try:
-            response = self.session.get(url, timeout=10)
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Extract links
-            for link in soup.find_all('a', href=True):
-                full_url = urljoin(url, link['href'])
-                if self.domain in full_url and full_url not in self.discovered_endpoints:
-                    self.discovered_endpoints.add(full_url)
-                    self.crawl(full_url, depth-1)
-            
-            # Extract forms
-            for form in soup.find_all('form'):
-                action = form.get('action', '')
-                if action:
-                    full_url = urljoin(url, action)
-                    if self.domain in full_url and full_url not in self.discovered_endpoints:
-                        self.discovered_endpoints.add(full_url)
-                        self.crawl(full_url, depth-1)
-            
-            time.sleep(0.5)
-        except Exception as e:
-            print(f"[-] Error crawling {url}: {str(e)}")
+    await production_crawler.cleanup()
+    print(f"\n{Fore.CYAN}✨ Scan session complete. ✨{Style.RESET_ALL}")
 
-    def test_sqli(self):
-        print("\n[*] Testing for SQL Injection vulnerabilities...")
-        payloads = self.load_payloads('sqli')
-        if not payloads:
-            print("[-] No SQLi payloads found in payloads/sql.txt")
-            return
-            
-        test_urls = [u for u in self.discovered_endpoints if '?' in u] + [self.target_url]
-        
-        for url in test_urls[:20]:  # Limit to 20 URLs for demo
-            if '?' in url:
-                base_url, params = url.split('?', 1)
-                param_pairs = params.split('&')
-                
-                for param in param_pairs:
-                    if '=' in param:
-                        param_name, param_value = param.split('=', 1)
-                        for payload in payloads:
-                            test_url = f"{base_url}?{param_name}={payload}"
-                            try:
-                                response = self.session.get(test_url, timeout=10)
-                                
-                                error_messages = [
-                                    "SQL syntax", "MySQL server", "syntax error",
-                                    "unclosed quotation mark", "ORA-00933",
-                                    "Microsoft OLE DB Provider", "PostgreSQL"
-                                ]
-                                
-                                if any(error.lower() in response.text.lower() for error in error_messages):
-                                    self.add_vulnerability(
-                                        "SQL Injection",
-                                        test_url,
-                                        f"Parameter '{param_name}' appears vulnerable to SQLi"
-                                    )
-                                    break
-                                    
-                            except Exception as e:
-                                print(f"[-] Error testing {test_url}: {str(e)}")
-                            
-                            time.sleep(0.3)
-
-    def test_xss(self):
-        print("\n[*] Testing for Cross-Site Scripting (XSS)...")
-        payloads = self.load_payloads('xss')
-        if not payloads:
-            print("[-] No XSS payloads found in payloads/xss.txt")
-            return
-            
-        test_urls = [u for u in self.discovered_endpoints if '?' in u] + [self.target_url]
-        
-        for url in test_urls[:20]:  # Limit to 20 URLs for demo
-            if '?' in url:
-                base_url, params = url.split('?', 1)
-                param_pairs = params.split('&')
-                
-                for param in param_pairs:
-                    if '=' in param:
-                        param_name, param_value = param.split('=', 1)
-                        for payload in payloads:
-                            test_url = f"{base_url}?{param_name}={payload}"
-                            try:
-                                response = self.session.get(test_url, timeout=5)
-                                if payload in response.text:
-                                    self.add_vulnerability(
-                                        "Cross-Site Scripting (XSS)",
-                                        test_url,
-                                        f"Reflected XSS in parameter '{param_name}'"
-                                    )
-                                    break
-                            except Exception as e:
-                                print(f"[-] Error testing {test_url}: {str(e)}")
-                            
-                            time.sleep(0.3)
-
-    def test_open_redirection(self):
-        print("\n[*] Testing for Open Redirection vulnerabilities...")
-        payloads = self.load_payloads('redirect')
-        if not payloads:
-            print("[-] No redirection payloads found in payloads/redirect.txt")
-            return
-            
-        test_urls = [u for u in self.discovered_endpoints if any(k in u.lower() for k in ['url=', 'redirect=', 'next='])]
-        
-        for url in test_urls[:10]:  # Limit to 10 URLs for demo
-            if '?' in url:
-                base_url, params = url.split('?', 1)
-                param_pairs = params.split('&')
-                
-                for param in param_pairs:
-                    if '=' in param and any(k in param.lower() for k in ['url=', 'redirect=', 'next=']):
-                        param_name, param_value = param.split('=', 1)
-                        for payload in payloads:
-                            test_url = f"{base_url}?{param_name}={payload}"
-                            try:
-                                response = self.session.get(test_url, allow_redirects=False, timeout=5)
-                                if response.status_code in (301, 302, 303, 307, 308):
-                                    location = response.headers.get('Location', '')
-                                    if payload in location:
-                                        self.add_vulnerability(
-                                            "Open Redirection",
-                                            test_url,
-                                            f"Unvalidated redirect in parameter '{param_name}'"
-                                        )
-                                        break
-                            except Exception as e:
-                                print(f"[-] Error testing {test_url}: {str(e)}")
-                            
-                            time.sleep(0.3)
-
-    def test_path_traversal(self):
-        print("\n[*] Testing for Path Traversal vulnerabilities...")
-        payloads = self.load_payloads('traversal')
-        if not payloads:
-            print("[-] No traversal payloads found in payloads/traversal.txt")
-            return
-            
-        test_urls = [u for u in self.discovered_endpoints if any(k in u.lower() for k in ['file=', 'path=', 'page='])]
-        
-        for url in test_urls[:10]:  # Limit to 10 URLs for demo
-            if '?' in url:
-                base_url, params = url.split('?', 1)
-                param_pairs = params.split('&')
-                
-                for param in param_pairs:
-                    if '=' in param and any(k in param.lower() for k in ['file=', 'path=', 'page=']):
-                        param_name, param_value = param.split('=', 1)
-                        for payload in payloads:
-                            test_url = f"{base_url}?{param_name}={payload}"
-                            try:
-                                response = self.session.get(test_url, timeout=5)
-                                if "root:" in response.text or "[extensions]" in response.text:
-                                    self.add_vulnerability(
-                                        "Path Traversal",
-                                        test_url,
-                                        f"Directory traversal via parameter '{param_name}'"
-                                    )
-                                    break
-                            except Exception as e:
-                                print(f"[-] Error testing {test_url}: {str(e)}")
-                            
-                            time.sleep(0.3)
-
-    def test_ssrf(self):
-        print("\n[*] Testing for Server-Side Request Forgery (SSRF)...")
-        payloads = self.load_payloads('ssrf')
-        if not payloads:
-            print("[-] No SSRF payloads found in payloads/ssrf.txt")
-            return
-            
-        # Implementation would be similar to other tests
-        print("[+] SSRF testing would be implemented here")
-
-    def test_cors(self):
-        print("\n[*] Testing for CORS Misconfigurations...")
-        payloads = self.load_payloads('cors')
-        if not payloads:
-            print("[-] No CORS payloads found in payloads/cors.txt")
-            return
-            
-        # Implementation would be similar to other tests
-        print("[+] CORS testing would be implemented here")
-
-    def test_jwt(self):
-        print("\n[*] Testing for JWT Issues...")
-        payloads = self.load_payloads('jwt')
-        if not payloads:
-            print("[-] No JWT payloads found in payloads/jwt.txt")
-            return
-            
-        # Implementation would be similar to other tests
-        print("[+] JWT testing would be implemented here")
-
-    def add_vulnerability(self, vuln_type, url, details):
-        self.vulnerabilities.append({
-            'type': vuln_type,
-            'url': url,
-            'details': details,
-            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        })
-
-    def show_results(self):
-        if not self.vulnerabilities:
-            print("\n[+] No vulnerabilities found!")
-        else:
-            print("\n[!] Found Vulnerabilities:")
-            print("="*60)
-            for i, vuln in enumerate(self.vulnerabilities, 1):
-                print(f"{i}. {vuln['type']}")
-                print(f"   URL: {vuln['url']}")
-                print(f"   Details: {vuln['details']}")
-                print(f"   Time: {vuln['timestamp']}")
-                print("-"*60)
-            
-            print(f"\nTotal vulnerabilities found: {len(self.vulnerabilities)}")
-
-    def run(self):
-        self.print_banner()
-        self.get_target_url()
-        self.show_scan_options()
-        choices = self.get_scan_choices()
-        self.run_selected_scans(choices)
 
 if __name__ == "__main__":
     try:
-        scanner = WebXScanner()
-        scanner.run()
+        # For the best banner experience, install pyfiglet: pip install pyfiglet
+        asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n[!] Scan interrupted by user")
-        sys.exit(0)
+        print(f"\n{Fore.YELLOW}\n[!] Application terminated by user.{Style.RESET_ALL}")
+    except Exception as e:
+        logger.error(f"A fatal error occurred: {e}", exc_info=True)
+        print(f"\n{Fore.RED}[-] A fatal error occurred: {e}{Style.RESET_ALL}")
+        sys.exit(1)

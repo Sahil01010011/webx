@@ -1,0 +1,45 @@
+# templates/xss/stored-xss-detection.yaml
+id: stored-xss-detection
+info:
+  name: Stored Cross-Site Scripting Detection
+  author: webx-elite
+  severity: high
+  description: Detects stored XSS vulnerabilities using time-delayed verification
+  tags:
+    - xss
+    - stored
+    - persistent
+  classification:
+    cwe-id: CWE-79
+
+vulnerability_type: xss
+
+request:
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "{{parameter}}={{stored_payload}}"
+    
+  - method: GET
+    path: "{{BaseURL}}"
+    
+    matchers:
+      - type: word
+        part: body
+        words:
+          - "webx_xss_test_"
+          - "<script>alert('stored')</script>"
+          - "document.webx_xss"
+        condition: or
+
+payloads:
+  # Unique identifiers for stored XSS
+  - "<script>document.webx_xss='stored_{{randstr}}'</script>"
+  - "<img src=x onerror=console.log('webx_xss_test_{{randstr}}')>"
+  - "<!--webx_xss_test_{{randstr}}--><script>alert('stored')</script>"
+  - "<svg onload=document.title='webx_xss_{{randstr}}'>"
+
+encoders:
+  - url
+  - html_encode

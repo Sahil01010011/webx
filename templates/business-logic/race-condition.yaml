@@ -1,0 +1,36 @@
+# templates/business-logic/race-condition.yaml
+id: race-condition
+info:
+  name: Race Condition Vulnerability
+  author: shadowxp
+  severity: medium
+  description: Tests for race condition vulnerabilities in critical operations
+  tags:
+    - race-condition
+    - business-logic
+    - timing
+
+vulnerability_type: business-logic
+
+request:
+  - method: POST
+    path: "{{BaseURL}}/{{endpoint}}"
+    threads: 10
+    body: "{{payload}}"
+    
+    matchers:
+      - type: word
+        words:
+          - "insufficient funds"
+          - "limit exceeded"
+          - "already processed"
+        part: body
+        negative: true
+
+payloads:
+  - "amount=1000&action=withdraw"
+  - "quantity=100&action=purchase"
+  - "coupon=DISCOUNT50&action=apply"
+
+encoders:
+  - url

@@ -1,0 +1,55 @@
+# templates/csrf/csrf-basic.yaml
+id: csrf-basic-detection
+info:
+  name: Basic CSRF Vulnerability Detection
+  author: shadowxp
+  severity: medium
+  description: Detects missing CSRF protection on state-changing operations
+  tags:
+    - csrf
+    - web
+    - authentication
+
+vulnerability_type: csrf
+
+request:
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "{{parameter}}=csrf_test_value"
+    
+    matchers-condition: and
+    matchers:
+      - type: status
+        status:
+          - 200
+          - 302
+      - type: word
+        words:
+          - "success"
+          - "updated"
+          - "changed"
+          - "saved"
+        part: body
+        condition: or
+      - type: word
+        words:
+          - csrf
+          - token
+          - authenticity
+        part: all
+        negative: true
+
+payloads:
+  - "email"
+  - "password"
+  - "username"
+  - "action"
+  - "submit"
+  - "update"
+  - "delete"
+  - "change"
+
+encoders:
+  - url

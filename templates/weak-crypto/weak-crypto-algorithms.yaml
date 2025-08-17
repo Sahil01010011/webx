@@ -1,0 +1,33 @@
+# templates/weak-crypto/weak-crypto-algorithms.yaml
+id: weak-crypto-algorithms
+info:
+  name: Weak Cryptographic Algorithm Detection
+  author: webx-elite
+  severity: medium
+  description: Detects usage of weak cryptographic algorithms
+  tags:
+    - weak-crypto
+    - cryptography
+    - algorithms
+  classification:
+    cwe-id: CWE-327
+
+vulnerability_type: weak-crypto
+
+request:
+  - method: GET
+    path: "{{BaseURL}}"
+    
+    matchers:
+      - type: regex
+        regex:
+          - "MD4|MD5"
+          - "SHA1|SHA-1"
+          - "DES|3DES"
+          - "RC4|RC2"
+          - "MD2"
+        part: body
+        condition: or
+
+payloads: []
+encoders: []

@@ -1,0 +1,45 @@
+# templates/csrf/csrf-token-bypass.yaml
+id: csrf-token-bypass
+info:
+  name: CSRF Token Bypass Detection
+  author: shadowxp
+  severity: high
+  description: Tests for CSRF token validation bypasses
+  tags:
+    - csrf
+    - bypass
+    - token
+
+vulnerability_type: csrf
+
+request:
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "{{parameter}}=csrf_bypass_test&csrf_token={{csrf_payload}}"
+    
+    matchers:
+      - type: status
+        status:
+          - 200
+          - 302
+      - type: word
+        words:
+          - "success"
+          - "updated"
+          - "processed"
+        part: body
+
+payloads:
+  - ""
+  - "invalid_token"
+  - "null"
+  - "undefined"
+  - "123456"
+  - "admin"
+  - "test"
+
+encoders:
+  - url
+  - double_url

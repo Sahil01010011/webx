@@ -1,0 +1,61 @@
+# templates/hpp/http-parameter-pollution.yaml
+id: http-parameter-pollution
+info:
+  name: HTTP Parameter Pollution Detection
+  author: webx-elite
+  severity: medium
+  description: Tests for HTTP Parameter Pollution vulnerabilities
+  tags:
+    - hpp
+    - parameter-pollution
+    - logic-flaw
+  classification:
+    cwe-id: CWE-235
+
+vulnerability_type: hpp
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}=legit&{{parameter}}={{hpp_payload}}"
+    
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "{{parameter}}=legit&{{parameter}}={{hpp_payload}}"
+    
+    matchers:
+      - type: word
+        words:
+          - "admin"
+          - "unauthorized"
+          - "forbidden"
+          - "success"
+          - "authentication"
+          - "privilege"
+        part: body
+        condition: or
+      - type: status
+        status:
+          - 200
+          - 302
+          - 403
+
+payloads:
+  # Privilege escalation
+  - "admin"
+  - "administrator"
+  - "root"
+  - "true"
+  - "1"
+  - "yes"
+  
+  # Authentication bypass
+  - "bypass"
+  - "skip"
+  - "ignore"
+  - "null"
+  - ""
+
+encoders:
+  - url

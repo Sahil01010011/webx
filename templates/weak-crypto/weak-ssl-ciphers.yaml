@@ -1,0 +1,34 @@
+# templates/weak-crypto/weak-ssl-ciphers.yaml
+id: weak-ssl-ciphers
+info:
+  name: Weak SSL/TLS Cipher Detection
+  author: webx-elite
+  severity: medium
+  description: Detects weak SSL/TLS cipher suites and protocols
+  tags:
+    - ssl-tls
+    - weak-crypto
+    - cryptographic-failures
+  classification:
+    cwe-id: CWE-326
+
+vulnerability_type: weak-crypto
+
+request:
+  - method: GET
+    path: "{{BaseURL}}"
+    
+    matchers:
+      - type: dsl
+        dsl:
+          - "contains(ssl_cipher, 'DES')"
+          - "contains(ssl_cipher, 'RC4')"
+          - "contains(ssl_cipher, 'MD5')"
+          - "contains(ssl_protocol, 'TLSv1.0')"
+          - "contains(ssl_protocol, 'SSLv')"
+          - "contains(ssl_cipher, 'NULL')"
+          - "contains(ssl_cipher, 'EXPORT')"
+        condition: or
+
+payloads: []
+encoders: []

@@ -1,0 +1,49 @@
+# templates/ssrf/ssrf-oast-detection.yaml
+id: ssrf-oast-detection
+info:
+  name: SSRF Out-of-Band Detection
+  author: webx-elite
+  severity: high
+  description: Detects SSRF vulnerabilities using out-of-band techniques
+  tags:
+    - ssrf
+    - oast
+    - blind
+  classification:
+    cwe-id: CWE-918
+
+vulnerability_type: ssrf
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}={{ssrf_payload}}"
+    
+  - method: POST
+    path: "{{BaseURL}}"
+    headers:
+      Content-Type: application/x-www-form-urlencoded
+    body: "{{parameter}}={{ssrf_payload}}"
+
+    matchers:
+      - type: dsl
+        dsl:
+          - "contains(body, 'http')"
+          - "status_code == 200"
+        condition: and
+
+payloads:
+  # OAST payloads
+  - "http://{{OAST}}"
+  - "https://{{OAST}}"
+  - "http://{{OAST}}/ssrf-test"
+  - "https://{{OAST}}/{{randstr}}"
+  
+  # Protocol variations
+  - "ftp://{{OAST}}"
+  - "gopher://{{OAST}}"
+  - "file://{{OAST}}/etc/passwd"
+  - "dict://{{OAST}}:11211/stat"
+
+encoders:
+  - url
+  - double_url

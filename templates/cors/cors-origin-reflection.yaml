@@ -1,0 +1,63 @@
+# templates/cors/cors-origin-reflection.yaml
+id: cors-origin-reflection
+info:
+  name: CORS Origin Reflection Vulnerability
+  author: webx-elite
+  severity: medium
+  description: Detects CORS misconfigurations allowing arbitrary origin access
+  tags:
+    - cors
+    - misconfiguration
+    - origin-reflection
+    - owasp-top10
+  classification:
+    cvss-metrics: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:N
+    cvss-score: 6.5
+    cwe-id: CWE-346
+
+vulnerability_type: cors
+
+request:
+  - method: GET
+    path: "{{BaseURL}}"
+    headers:
+      Origin: "{{cors_origin}}"
+    
+    matchers-condition: and
+    matchers:
+      - type: word
+        part: header
+        words:
+          - "Access-Control-Allow-Origin: {{cors_origin}}"
+          - "Access-Control-Allow-Credentials: true"
+        condition: and
+        
+      - type: status
+        status:
+          - 200
+
+payloads:
+  # Malicious origins
+  - "https://evil.com"
+  - "http://attacker.com"
+  - "https://malicious-domain.com"
+  
+  # Null origin
+  - "null"
+  
+  # Arbitrary subdomains
+  - "https://evil.target.com"
+  - "https://target.com.evil.com"
+  - "https://target-com.evil.com"
+  
+  # Protocol variations
+  - "http://localhost"
+  - "https://127.0.0.1"
+  
+  # Special characters
+  - "https://target.com'"
+  - "https://target.com\""
+  - "https://target.com%60"
+
+encoders:
+  - url

